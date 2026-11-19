@@ -8,10 +8,14 @@ export const GRADES = [
     id: 'poster-ink',
     name: 'Poster Ink',
     swatch: ['#ff9e2e', '#ff2e88'],
-    filter: 'saturate(1.9) contrast(1.32) brightness(1.05)',
-    // Comic-book print: the photo is quantised to a few flat tones, then a
-    // halftone dot screen is multiplied over it, like a newsstand poster.
-    posterize: { levels: 5, halftone: 0.5 },
+    // A light print: the photo stays a photo. The quantise is gentle
+    // (7 tones, not 5) and the dot screen is fine and faint, so a face
+    // keeps its likeness at full size and at 300 px — the dots texture the
+    // print, they never draw over it. The grade's strength slider blends
+    // the print layer over the clean photo, so the maker can push it to a
+    // full comic look or pull it back to a plain graded photo.
+    filter: 'saturate(1.6) contrast(1.18) brightness(1.04)',
+    posterize: { levels: 7, halftone: 0.22 },
     washes: [
       {
         from: 'rgba(255, 122, 60, 0.10)',

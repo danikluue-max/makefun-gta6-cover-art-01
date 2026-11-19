@@ -1,10 +1,10 @@
 // Fixed scenes for screenshots: ?shot=editor shows the page with sample photos
 // loaded; ?shot=cover shows the cover alone at the requested post size.
 // Query knobs: size=square|portrait|landscape, layout=<id>, grade=<id>,
-// photo=<sample for panels 1, 6, 11...>, photo2=<sample for panels 2, 7...>,
-// photo3=<sample for panels 3, 8...>, photo4=<sample for panels 4, 9...>,
-// photo5=<sample for panels 5, 10...>, title=<words>, subtitle=<words>,
-// tagline=<words>, badge=<words>, stars=<0-5>.
+// strength=<0-100 print strength>, photo=<sample for panels 1, 6, 11...>,
+// photo2=<sample for panels 2, 7...>, photo3=<sample for panels 3, 8...>,
+// photo4=<sample for panels 4, 9...>, photo5=<sample for panels 5, 10...>,
+// title=<words>, subtitle=<words>, tagline=<words>, badge=<words>, stars=<0-5>.
 // window.__shotReady is set by main.js once the scene is painted.
 
 // One distinct crop per panel index, so no two panels ever show the same
@@ -40,6 +40,10 @@ export async function runShot(shot, query, api) {
   const tagline = query.get('tagline') ?? 'ONE NIGHT ON THE COAST';
   const badge = query.get('badge') ?? 'NEW';
   const stars = Number(query.get('stars') ?? 5);
+  // How hard the print layer bites (0–100): the shots use the same gentle
+  // default as the editor, so the faces stay photographic.
+  const strength = query.get('strength');
+  const intensity = strength === null ? 0.6 : Math.max(0, Math.min(1, Number(strength) / 100));
   const photo = query.get('photo') ?? 'rider';
   const photo2 = query.get('photo2') ?? 'neon';
   const photo3 = query.get('photo3') ?? 'street';
@@ -52,6 +56,7 @@ export async function runShot(shot, query, api) {
     size: ['square', 'portrait', 'landscape'].includes(size) ? size : 'square',
     layout,
     grade,
+    intensity,
     title,
     subtitle,
     tagline,

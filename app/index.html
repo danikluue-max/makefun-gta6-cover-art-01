@@ -21,11 +21,19 @@
     <button id="redo" type="button" disabled>Redo</button>
   </div>
 </header>
+<div class="quickbar" role="group" aria-label="Quick export">
+  <span class="quickbar-label">Quick export</span>
+  <button class="quick-size-btn active" type="button" data-size="square">Square 1080 × 1080</button>
+  <button class="quick-size-btn" type="button" data-size="portrait">Portrait 1080 × 1350</button>
+  <button class="quick-size-btn" type="button" data-size="landscape">Wide 1920 × 1080</button>
+  <button id="quick-export" class="primary" type="button">Export PNG</button>
+</div>
 <main class="app">
   <section class="controls" aria-label="Cover controls">
     <div class="group">
       <h2>1 · Photos</h2>
       <p class="hint">Upload your own photos, or use the samples. Click a panel to work on it.</p>
+      <div id="photo-library" class="library" aria-label="Photo library"></div>
       <div id="photo-slots"></div>
       <button id="fill-all" type="button">Fill all panels with one photo</button>
       <label class="zoom-row">Zoom panel
@@ -43,6 +51,11 @@
     <div class="group">
       <h2>3 · Colour grade</h2>
       <div id="grade-list" class="pick-list"></div>
+      <label class="zoom-row">Print strength
+        <input id="intensity" type="range" min="0" max="100" step="5" value="60">
+        <span id="intensity-value">60%</span>
+      </label>
+      <p class="hint">How hard the Poster Ink print layer bites. Low keeps the photos photographic; high is the full comic print.</p>
     </div>
     <div class="group">
       <h2>4 · Words</h2>

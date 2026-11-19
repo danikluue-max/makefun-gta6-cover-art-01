@@ -14,13 +14,13 @@
   {
     "h": 1280,
     "name": "3-cover-portrait.jpg",
-    "query": "?shot=cover&size=portrait&layout=grid-4&grade=poster-ink&photo=neon&photo2=rider&photo3=street&photo4=pier&photo5=boulevard&title=NEON%20TIDE&subtitle=the%20city%20never%20sleeps&tagline=FIVE%20STARS%20AFTER%20DARK&badge=NEW",
+    "query": "?shot=cover&size=portrait&layout=grid-4&grade=neon&photo=neon&photo2=rider&photo3=street&photo4=pier&photo5=boulevard&title=NEON%20TIDE&subtitle=the%20city%20never%20sleeps&tagline=FIVE%20STARS%20AFTER%20DARK&badge=NEW",
     "w": 1024
   },
   {
     "h": 1024,
     "name": "4-cover-square.jpg",
-    "query": "?shot=cover&size=square&layout=tilted&grade=poster-ink&photo=rider&photo2=street&photo3=neon&photo4=pier&photo5=boulevard&title=GOLD%20HOUR&subtitle=outrun%20the%20sunset&tagline=FULL%20THROTTLE%20AT%20DUSK&badge=NEW",
+    "query": "?shot=cover&size=square&layout=tilted&grade=gold&photo=rider&photo2=street&photo3=neon&photo4=pier&photo5=boulevard&title=GOLD%20HOUR&subtitle=outrun%20the%20sunset&tagline=FULL%20THROTTLE%20AT%20DUSK&badge=NEW",
     "w": 1024
   }
 ]

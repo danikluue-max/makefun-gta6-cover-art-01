@@ -122,6 +122,6 @@ export function layoutPanels(layout, w, h) {
 // the star meter, so lettering can never run off the bottom edge and no
 // caption ever sits on a face. Photos live above it, never under it.
 export function captionBand(w, h) {
-  const bandH = Math.round(h * (h >= w ? 0.21 : 0.26));
+  const bandH = Math.round(h * (h >= w ? 0.2 : 0.24));
   return { x: 0, y: h - bandH, w, h: bandH };
 }

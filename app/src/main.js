@@ -41,10 +41,13 @@ const grainInput = document.getElementById('grain');
 const vignetteInput = document.getElementById('vignette');
 const zoomInput = document.getElementById('zoom');
 const zoomValue = document.getElementById('zoom-value');
+const intensityInput = document.getElementById('intensity');
+const intensityValue = document.getElementById('intensity-value');
 const fileInput = document.getElementById('photo-file');
 const selectedLabel = document.getElementById('selected-label');
 
-/** The cover document: layout, grade, words, effects and one photo per panel. */
+/** The cover document: layout, grade, print strength, words, effects and
+ *  one photo per panel. */
 let doc = freshDoc();
 let selected = 0;
 let undoStack = [];
@@ -57,6 +60,7 @@ function freshDoc() {
     size: 'square',
     layout: 'hero-three',
     grade: 'poster-ink',
+    intensity: 0.6,
     title: 'VICE COAST',
     subtitle: 'every street has a story',
     tagline: 'ONE NIGHT ON THE COAST',
@@ -134,12 +138,14 @@ async function restore(text) {
   taglineInput.value = doc.tagline || '';
   badgeInput.value = doc.badge;
   starsInput.value = String(doc.stars);
+  intensityInput.value = String(Math.round((doc.intensity ?? 0.6) * 100));
   grainInput.checked = doc.grain;
   vignetteInput.checked = doc.vignette;
   syncPanels();
   refreshLayoutButtons();
   refreshGradeButtons();
   refreshSizeButtons();
+  refreshIntensity();
   redraw();
 }
 
@@ -235,6 +241,44 @@ function refreshSizeButtons() {
   }
 }
 
+// ---- Photo library ---------------------------------------------------------
+// One visible row of every photo: tap one and it lands in the selected
+// panel, so the whole multi-photo tray is obvious at a glance.
+
+function buildLibrary() {
+  const list = document.getElementById('photo-library');
+  for (const sample of SAMPLES) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'library-photo';
+    button.innerHTML = `<img src="${sample.src}" alt="${sample.label} photo"><span>${sample.label}</span>`;
+    button.addEventListener('click', async () => {
+      pushHistory();
+      try {
+        doc.panels[selected] = {
+          img: await loadImage(sample.src),
+          src: sample.src,
+          ...panelCrop(selected),
+        };
+        redraw();
+        say(`Panel ${selected + 1}: ${sample.label} photo loaded.`);
+      } catch {
+        say(`Could not load the ${sample.label} photo.`);
+      }
+    });
+    list.appendChild(button);
+  }
+  const upload = document.createElement('button');
+  upload.type = 'button';
+  upload.className = 'library-photo library-upload';
+  upload.innerHTML = `<span class="library-plus">+</span><span>Upload</span>`;
+  upload.addEventListener('click', () => {
+    pendingSlot = selected;
+    fileInput.click();
+  });
+  list.appendChild(upload);
+}
+
 // ---- Photo slots -----------------------------------------------------------
 
 function refreshSlots() {
@@ -294,6 +338,22 @@ function refreshZoom() {
   zoomInput.value = String(panel.zoom || 1);
   zoomValue.textContent = `${Math.round((panel.zoom || 1) * 100)}%`;
 }
+
+/** The print-strength readout: how hard the Poster Ink print layer bites. */
+function refreshIntensity() {
+  const value = Math.round((doc.intensity ?? 0.6) * 100);
+  intensityInput.value = String(value);
+  intensityValue.textContent = `${value}%`;
+}
+
+intensityInput.addEventListener('input', () => {
+  doc.intensity = Number(intensityInput.value) / 100;
+  refreshIntensity();
+  redraw();
+});
+intensityInput.addEventListener('change', () => {
+  pushHistory();
+});
 
 // ---- Drag to pan, wheel to zoom --------------------------------------------
 
@@ -496,6 +556,34 @@ for (const button of document.querySelectorAll('.export-btn')) {
   });
 }
 
+// The quick-export bar under the header: one tap picks a size, one tap
+// saves the PNG — no scrolling to the foot of the controls.
+for (const button of document.querySelectorAll('.quick-size-btn')) {
+  button.addEventListener('click', () => {
+    if (doc.size === button.dataset.size) return;
+    pushHistory();
+    doc.size = button.dataset.size;
+    refreshSizeButtons();
+    refreshQuickSizeButtons();
+    redraw();
+    say(`Post size: ${SIZES[doc.size].label}.`);
+  });
+}
+
+function refreshQuickSizeButtons() {
+  for (const button of document.querySelectorAll('.quick-size-btn')) {
+    button.classList.toggle('active', button.dataset.size === doc.size);
+  }
+}
+
+document.getElementById('quick-export').addEventListener('click', async () => {
+  try {
+    await downloadPNG(doc.size);
+  } catch {
+    say('Export failed — try again.');
+  }
+});
+
 document.getElementById('export-all').addEventListener('click', async () => {
   try {
     for (const sizeId of Object.keys(SIZES)) {
@@ -535,12 +623,15 @@ window.__exportCover = async (sizeId) => {
 
 async function start() {
   syncPanels();
+  buildLibrary();
   buildLayoutButtons();
   buildGradeButtons();
   buildPresets();
   refreshLayoutButtons();
   refreshGradeButtons();
   refreshSizeButtons();
+  refreshQuickSizeButtons();
+  refreshIntensity();
   refreshHistoryButtons();
   const shot = new URLSearchParams(location.search).get('shot');
   if (shot) {
@@ -560,6 +651,8 @@ async function start() {
         refreshLayoutButtons();
         refreshGradeButtons();
         refreshSizeButtons();
+        refreshQuickSizeButtons();
+        refreshIntensity();
       },
       draw: () => redraw(),
       setPanels: async (frames) => {

@@ -2,10 +2,11 @@
 // like a Vice City sunset or a neon night, then bold poster lettering, a badge
 // ribbon, a star heat-meter, grain and a vignette. Everything draws on a plain
 // 2D canvas, so the same code paints the live preview and the exported PNGs.
-// A `doc` is { layout, grade, title, subtitle, tagline, badge, stars, grain,
-// vignette, panels: [{ img, zoom, ox, oy }] } where ox/oy are pan fractions
-// of the panel. The Poster Ink grade quantises each photo to flat comic tones
-// under a halftone dot screen, so even a plain snapshot reads as key art.
+// A `doc` is { layout, grade, intensity, title, subtitle, tagline, badge,
+// stars, grain, vignette, panels: [{ img, zoom, ox, oy }] } where ox/oy are
+// pan fractions of the panel. The Poster Ink grade lays a gentle quantised,
+// dot-screened print layer over the clean photo at `intensity`, so even a
+// plain snapshot reads as key art while the faces in it stay photographic.
 import { layoutPanels, captionBand, layoutById } from './layouts.js';
 import { gradeById } from './grades.js';
 
@@ -49,7 +50,7 @@ export function renderCover(canvas, doc, opts = {}) {
   ctx.fillRect(0, 0, w, h);
 
   panels.forEach((rect, i) => {
-    drawPanel(ctx, rect, doc.panels[i] ?? null, grade);
+    drawPanel(ctx, rect, doc.panels[i] ?? null, grade, doc.intensity ?? 0.6);
   });
 
   drawCaptionStrip(ctx, band, doc, w);
@@ -65,7 +66,7 @@ export function renderCover(canvas, doc, opts = {}) {
 }
 
 /** One photo panel: the photo cover-fit inside its (possibly tilted) frame, graded. */
-function drawPanel(ctx, rect, panel, grade) {
+function drawPanel(ctx, rect, panel, grade, intensity = 0.6) {
   ctx.save();
   const cx = rect.x + rect.w / 2;
   const cy = rect.y + rect.h / 2;
@@ -78,26 +79,17 @@ function drawPanel(ctx, rect, panel, grade) {
 
   if (panel && panel.img) {
     if (grade.posterize) {
-      // Comic print path: the photo is re-rendered through a quantised,
-      // halftone-screened offscreen canvas, then stamped into the panel.
+      // Print path, kept photographic: the clean graded photo goes down
+      // first, then the quantised, dot-screened layer blends over it at
+      // the grade's strength, so a face never loses its likeness to the
+      // dots. Strength 0 is a plain graded photo, 1 the full print.
+      drawCleanPhoto(ctx, rect, panel, grade);
+      ctx.save();
+      ctx.globalAlpha = intensity;
       ctx.drawImage(posterizePanel(panel.img, rect, panel, grade), 0, 0);
+      ctx.restore();
     } else {
-      const img = panel.img;
-      const base = Math.max(rect.w / img.naturalWidth, rect.h / img.naturalHeight);
-      const scale = base * (panel.zoom || 1);
-      const pw = img.naturalWidth * scale;
-      const ph = img.naturalHeight * scale;
-      // Clamp the pan to the photo's own edges, so a crop can ask for the top
-      // of the photo but never slide past it and leave the panel bare.
-      const oxRange = (pw - rect.w) / (2 * rect.w);
-      const oyRange = (ph - rect.h) / (2 * rect.h);
-      const ox = Math.max(-oxRange, Math.min(oxRange, panel.ox || 0));
-      const oy = Math.max(-oyRange, Math.min(oyRange, panel.oy || 0));
-      const dx = (rect.w - pw) / 2 + ox * rect.w;
-      const dy = (rect.h - ph) / 2 + oy * rect.h;
-      ctx.filter = grade.filter;
-      ctx.drawImage(img, dx, dy, pw, ph);
-      ctx.filter = 'none';
+      drawCleanPhoto(ctx, rect, panel, grade);
     }
   } else {
     ctx.fillStyle = '#3a1c52';
@@ -132,22 +124,45 @@ function drawPanel(ctx, rect, panel, grade) {
 }
 
 let halftoneTileCanvas = null;
-/** One 8 px tile: white with a single black dot — multiplied over a photo
- *  it reads as a printed halftone screen. Fixed, so exports stay exact. */
+/** One 10 px tile: white with a single small black dot — multiplied over
+ *  a photo it reads as a fine printed screen, never a comic overlay. The
+ *  dot is small and the tile wide, so the screen textures the print
+ *  without drawing over a face. Fixed, so exports stay exact. */
 function halftoneTile() {
   if (halftoneTileCanvas) return halftoneTileCanvas;
   const tile = document.createElement('canvas');
-  tile.width = 8;
-  tile.height = 8;
+  tile.width = 10;
+  tile.height = 10;
   const tctx = tile.getContext('2d');
   tctx.fillStyle = '#ffffff';
-  tctx.fillRect(0, 0, 8, 8);
+  tctx.fillRect(0, 0, 10, 10);
   tctx.fillStyle = '#000000';
   tctx.beginPath();
-  tctx.arc(4, 4, 1.9, 0, Math.PI * 2);
+  tctx.arc(5, 5, 1.5, 0, Math.PI * 2);
   tctx.fill();
   halftoneTileCanvas = tile;
   return tile;
+}
+
+/** The clean graded photo, cover-fit in the panel: the base every grade
+ *  paints on, so the photo itself is always underneath the print layer. */
+function drawCleanPhoto(ctx, rect, panel, grade) {
+  const img = panel.img;
+  const base = Math.max(rect.w / img.naturalWidth, rect.h / img.naturalHeight);
+  const scale = base * (panel.zoom || 1);
+  const pw = img.naturalWidth * scale;
+  const ph = img.naturalHeight * scale;
+  // Clamp the pan to the photo's own edges, so a crop can ask for the top
+  // of the photo but never slide past it and leave the panel bare.
+  const oxRange = (pw - rect.w) / (2 * rect.w);
+  const oyRange = (ph - rect.h) / (2 * rect.h);
+  const ox = Math.max(-oxRange, Math.min(oxRange, panel.ox || 0));
+  const oy = Math.max(-oyRange, Math.min(oyRange, panel.oy || 0));
+  const dx = (rect.w - pw) / 2 + ox * rect.w;
+  const dy = (rect.h - ph) / 2 + oy * rect.h;
+  ctx.filter = grade.filter;
+  ctx.drawImage(img, dx, dy, pw, ph);
+  ctx.filter = 'none';
 }
 
 const posterCache = new Map();
@@ -350,13 +365,14 @@ function drawStarsInStrip(ctx, band, w, stars) {
   }
 }
 
-/** A jagged starburst seal in the top-left corner, over sky or background —
- *  the "NEW" sticker on a poster sleeve. The words shrink to fit inside it,
- *  splitting onto two lines when they are long. */
+/** A small jagged starburst seal in the top-left corner, over sky or
+ *  background — the "NEW" sticker on a poster sleeve, kept small so it
+ *  accents the cover instead of competing with the photos. The words
+ *  shrink to fit inside it, splitting onto two lines when they are long. */
 function drawBadge(ctx, w, h, badge) {
   const text = (badge || '').trim().toUpperCase();
   if (!text) return;
-  const R = Math.round(Math.min(w, h) * 0.062);
+  const R = Math.round(Math.min(w, h) * 0.042);
   const cx = w * 0.058;
   const cy = h * 0.058;
   ctx.save();
